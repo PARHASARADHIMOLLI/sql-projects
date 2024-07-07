@@ -1,101 +1,127 @@
-drop table if exists goldusers_signup;
-CREATE TABLE goldusers_signup(userid integer,gold_signup_date date);
-INSERT INTO goldusers_signup(userid,gold_signup_date)
-values(1,'09-30-2022'),(2,'04-21-2022'),(3,'10-25-2022');
-drop table if exists users;
-CREATE TABLE users(userid integer,signup_date date);
-INSERT INTO users(userid,signup_date)
-VALUES(1,'12-12-2022'),(2,'03-23-2022'),(3,'06-30-2022');
-drop table if exists sales;
-CREATE TABLE sales(userid integer,created_date date, product_id integer);
-INSERT INTO sales(userid,created_date,product_id)
-VALUES (1,'04-19-2022',2),
-(3,'12-18-2021',1),
-(2,'07-20-2020',3),
-(1,'10-23-2022',2),
-(1,'03-19-2021',3),
-(3,'12-20-2020',2),
-(1,'11-09-2021',1),
-(1,'05-20-2018',3),
-(2,'09-24-2022',1),
-(1,'03-11-2019',2),
-(1,'03-11-2018',1),
-(3,'11-10-2016',1),
-(3,'12-07-2017',2),
-(3,'12-15-2016',2),
-(2,'11-08-2017',2),
-(2,'09-10-2018',3);
+-- Users Table
+CREATE TABLE Users (
+    user_id INT PRIMARY KEY,
+    user_name VARCHAR(50),
+    user_email VARCHAR(100),
+    user_phone VARCHAR(15)
+);
 
+INSERT INTO Users (user_id, user_name, user_email, user_phone) VALUES
+(1, 'Alice', 'alice@example.com', '1234567890'),
+(2, 'Bob', 'bob@example.com', '0987654321'),
+(3, 'Charlie', 'charlie@example.com', '5678901234'),
+(4, 'David', 'david@example.com', '6789012345');
 
-drop table if exists product;
-CREATE TABLE product(product_id integer,product_name text,price integer); 
+-- Menu Table
+CREATE TABLE Menu (
+    menu_id INT PRIMARY KEY,
+    item_name VARCHAR(100),
+    item_price DECIMAL(10, 2)
+);
 
-INSERT INTO product(product_id,product_name,price) 
- VALUES
-(1,'non vegthali',980),
-(2,'veg thali',870),
-(3,'empty',330);
+INSERT INTO Menu (menu_id, item_name, item_price) VALUES
+(1, 'Margherita Pizza', 10.99),
+(2, 'Pepperoni Pizza', 12.99),
+(3, 'Cheeseburger', 8.99),
+(4, 'Veggie Burger', 7.99),
+(5, 'French Fries', 3.99),
+(6, 'Coke', 1.99);
 
+-- Orders Table
+CREATE TABLE Orders (
+    order_id INT PRIMARY KEY,
+    user_id INT,
+    menu_id INT,
+    order_date DATETIME,
+    quantity INT,
+    total_amount DECIMAL(10, 2),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (menu_id) REFERENCES Menu(menu_id)
+);
 
-select * from sales;
-select * from product;
-select * from goldusers_signup;
-select * from users;
+INSERT INTO Orders (order_id, user_id, menu_id, order_date, quantity, total_amount) VALUES
+(1, 1, 1, '2024-06-13 12:30:00', 2, 21.98),
+(2, 2, 3, '2024-06-14 18:45:00', 1, 8.99),
+(3, 3, 2, '2024-06-15 13:00:00', 1, 12.99),
+(4, 1, 4, '2024-06-15 14:00:00', 1, 7.99),
+(5, 4, 5, '2024-06-16 11:00:00', 3, 11.97),
+(6, 3, 6, '2024-06-16 11:30:00', 2, 3.98),
+(7, 2, 1, '2024-06-17 12:00:00', 1, 10.99),
+(8, 4, 2, '2024-06-17 12:15:00', 2, 25.98);
 
+-- Queries
 
+-- List all users
+SELECT * FROM Users;
 
- ---- what is total amount each customer spent on zomato ?
+-- List the menu
+SELECT * FROM Menu;
 
-SELECT a.userid,sum(price) total_amount_spent FROM sales a inner join product b ON a.product_id=b.product_id 
-GROUP BY a.userid
+-- Place a new order
+INSERT INTO Orders (order_id, user_id, menu_id, order_date, quantity, total_amount)
+VALUES (9, 2, 5, '2024-06-18 13:00:00', 2, 7.98);
 
- ---- How many days has each customer visited zomato?
-SELECT userid,count(distinct created_date) number_of_orderedays FROM sales group by userid;
- 
+-- Get all orders for a specific user
+SELECT * FROM Orders WHERE user_id = 1;
 
+-- Get the total amount spent by a user
+SELECT user_id, SUM(total_amount) AS total_spent
+FROM Orders
+WHERE user_id = 1
+GROUP BY user_id;
 
- --- what was the first product purchased by each customer?
+-- Find the most popular menu item
+SELECT menu_id, SUM(quantity) AS total_ordered
+FROM Orders
+GROUP BY menu_id
+ORDER BY total_ordered DESC
+LIMIT 1;
 
-select * from
-(select*,rank() over (partition by userid order by created_date ) rnk from sales) a where rnk = 1
+-- Get the list of orders along with user details
+SELECT o.order_id, o.order_date, o.quantity, o.total_amount,
+       u.user_name, u.user_email, u.user_phone,
+       m.item_name, m.item_price
+FROM Orders o
+JOIN Users u ON o.user_id = u.user_id
+JOIN Menu m ON o.menu_id = m.menu_id;
 
+-- Calculate the total sales
+SELECT SUM(total_amount) AS total_sales
+FROM Orders;
 
---- what is most purchased item on menu & how many times was it purchased by all customers ?
+-- Get the number of orders for each user
+SELECT user_id, COUNT(*) AS order_count
+FROM Orders
+GROUP BY user_id;
 
-select userid,count(product_id) cnt from sales where product_id =
-(select top 1 product_id from sales group by product_id order by count(product_id) desc)
-group by userid
+-- Get the average amount spent per order by each user
+SELECT user_id, AVG(total_amount) AS avg_spent
+FROM Orders
+GROUP BY user_id;
 
+-- Get the total number of items sold
+SELECT SUM(quantity) AS total_items_sold
+FROM Orders;
 
- ---- which item was most popular for each customer?
+-- Find all orders made on a specific date
+SELECT * FROM Orders
+WHERE DATE(order_date) = '2024-06-15';
 
-select * from
-(select *,rank() over(partition by userid order by cnt desc) rnk from
-(select userid,product_id,count(product_id) cnt from sales group by userid,product_id)a)b
-where rnk =1
+-- List users who have ordered more than a specific amount
+SELECT u.user_id, u.user_name, SUM(o.total_amount) AS total_spent
+FROM Users u
+JOIN Orders o ON u.user_id = o.user_id
+GROUP BY u.user_id, u.user_name
+HAVING SUM(o.total_amount) > 20;
 
+-- Find the menu items that have never been ordered
+SELECT m.item_name
+FROM Menu m
+LEFT JOIN Orders o ON m.menu_id = o.menu_id
+WHERE o.menu_id IS NULL;
 
- --- which item was purchased first by customer after they become a member ?
-
-select * from
-(select c.*,rank() over (partition by userid order by created_date ) rnk from
-(select a.userid,a.created_date,a.product_id,b.gold_signup_date from sales a inner join 
-goldusers_signup b on a.userid=b.userid and created_date>=gold_signup_date) c)d where rnk=1;
-
-
- --- which item was purchased just before customer became a member?
-
-select * from
-(select c.*,rank() over (partition by userid order by created_date desc ) rnk from
-(select a.userid,a.created_date,a.product_id,b.gold_signup_date from sales a inner join 
-goldusers_signup b on a.userid=b.userid and created_date<=gold_signup_date) c)d where rnk=1;
-
-
- ---- what is total orders and amount spent for each member before they become a member ?
-
-select userid,count(created_date) order_purchased,sum(price) total_amt_spent from
-(select c.*,d.price from
-(select a.userid,a.created_date,a.product_id,b.gold_signup_date from sales a inner join 
-goldusers_signup b on a.userid=b.userid and created_date<=gold_signup_date) c inner join product d on c.product_id=d.product_id)e
-group by userid;
-
+-- Get the revenue generated from each menu item
+SELECT m.item_name, SUM(o.total_amount) AS total_revenue
+FROM Menu m
+JOIN Orders o ON m.menu_id = o.menu_id
+GROUP BY m.item_name;
